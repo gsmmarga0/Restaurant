@@ -5,12 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GSM Restaurant POS</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
             --primary: #2563eb;
             --primary-dark: #1d4ed8;
             --success: #16a34a;
             --danger: #dc2626;
+            --warning: #f59e0b;
             --bg: #f1f5f9;
             --card-bg: #ffffff;
             --text: #1e293b;
@@ -36,23 +38,27 @@
             align-items: center;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             z-index: 10;
+            flex-wrap: wrap;
+            gap: 12px;
         }
         header h1 { font-size: 1.5rem; font-weight: 700; }
-        .header-actions { display: flex; gap: 12px; align-items: center; }
+        .header-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
         .header-actions button {
             background: rgba(255,255,255,0.2);
             border: 1px solid rgba(255,255,255,0.3);
             color: white;
-            padding: 8px 16px;
+            padding: 8px 14px;
             border-radius: 6px;
             cursor: pointer;
             font-weight: 600;
+            font-family: inherit;
+            font-size: 0.85rem;
             transition: background 0.2s;
         }
         .header-actions button:hover { background: rgba(255,255,255,0.3); }
         .main-container { display: flex; flex: 1; overflow: hidden; }
 
-        /* Left: Menu */
+        /* ==================== LEFT: MENU ==================== */
         .menu-panel {
             flex: 2;
             padding: 20px;
@@ -60,6 +66,13 @@
             border-right: 1px solid var(--border);
             background: var(--bg);
         }
+        .menu-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        .menu-header h2 { font-size: 1.1rem; }
         .category-tabs {
             display: flex;
             gap: 8px;
@@ -94,18 +107,31 @@
             cursor: pointer;
             transition: transform 0.15s, box-shadow 0.15s;
             border: 1px solid var(--border);
+            position: relative;
         }
         .menu-item-card:hover {
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
-        .menu-item-card h4 { font-size: 0.95rem; margin-bottom: 4px; }
+        .menu-item-card h4 { font-size: 0.95rem; margin-bottom: 4px; padding-right: 20px; }
         .menu-item-card .price { color: var(--primary); font-weight: 700; }
+        .menu-item-card .desc { font-size: 0.75rem; color: var(--text-light); margin-top: 4px; }
+        .menu-item-card .cat-badge {
+            display: inline-block;
+            font-size: 0.65rem;
+            padding: 2px 8px;
+            border-radius: 10px;
+            background: #e0e7ff;
+            color: #3730a3;
+            font-weight: 600;
+            margin-top: 6px;
+        }
 
-        /* Right: Cart & Actions */
+        /* ==================== RIGHT: CART ==================== */
         .cart-panel {
             flex: 1;
-            min-width: 340px;
+            min-width: 380px;
+            max-width: 460px;
             background: var(--card-bg);
             display: flex;
             flex-direction: column;
@@ -119,18 +145,59 @@
             align-items: center;
         }
         .cart-header h3 { font-size: 1.1rem; }
-        .table-selector {
-            padding: 16px 20px;
+
+        /* Table grid */
+        .table-picker {
+            padding: 14px 20px;
             border-bottom: 1px solid var(--border);
         }
-        .table-selector select {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            font-size: 1rem;
-            font-family: inherit;
+        .table-picker > label {
+            font-weight: 600;
+            font-size: 0.85rem;
+            display: block;
+            margin-bottom: 10px;
+            color: var(--text-light);
         }
+        .table-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 6px;
+        }
+        .table-btn {
+            padding: 10px 0;
+            border-radius: 8px;
+            border: 2px solid var(--border);
+            background: var(--card-bg);
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 0.85rem;
+            font-family: inherit;
+            color: var(--text);
+            transition: all 0.15s;
+        }
+        .table-btn:hover {
+            border-color: var(--primary);
+            background: #eff6ff;
+        }
+        .table-btn.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+            transform: scale(1.05);
+            box-shadow: 0 4px 10px rgba(37,99,235,0.3);
+        }
+        .table-btn.takeaway {
+            grid-column: span 3;
+            background: #fef3c7;
+            border-color: #fcd34d;
+            color: #92400e;
+        }
+        .table-btn.takeaway.active {
+            background: var(--warning);
+            border-color: var(--warning);
+            color: white;
+        }
+
         .cart-items {
             flex: 1;
             overflow-y: auto;
@@ -156,6 +223,7 @@
             font-weight: 700;
             display: grid;
             place-items: center;
+            font-size: 1rem;
         }
         .cart-total {
             padding: 16px 20px;
@@ -193,24 +261,27 @@
             color: var(--text);
         }
         .btn-outline:hover { background: var(--bg); }
+        .btn-sm { padding: 6px 12px; font-size: 0.85rem; }
 
-        /* Modal */
+        /* ==================== MODALS ==================== */
         .modal-overlay {
             position: fixed; inset: 0;
             background: rgba(0,0,0,0.5);
             display: none;
             place-items: center;
             z-index: 100;
+            padding: 20px;
         }
         .modal-overlay.active { display: grid; }
         .modal {
             background: var(--card-bg);
             border-radius: 12px;
             padding: 24px;
-            width: 90%; max-width: 500px;
+            width: 100%; max-width: 500px;
             max-height: 90vh;
             overflow-y: auto;
         }
+        .modal-lg { max-width: 900px; }
         .modal h2 { margin-bottom: 16px; }
         .modal .form-group { margin-bottom: 12px; }
         .modal label { display: block; font-weight: 600; margin-bottom: 4px; font-size: 0.9rem; }
@@ -224,8 +295,25 @@
         }
         .modal .btn-group { display: flex; gap: 10px; margin-top: 16px; }
         .modal .btn-group .btn { flex: 1; }
-        .payment-options { display: flex; gap: 10px; margin-top: 10px; }
-        .payment-options .btn { flex: 1; }
+
+        /* Catalogue list */
+        .catalogue-list {
+            max-height: 500px;
+            overflow-y: auto;
+            margin-top: 12px;
+        }
+        .catalogue-row {
+            display: grid;
+            grid-template-columns: 1fr auto auto auto;
+            gap: 12px;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .catalogue-row .name { font-weight: 600; }
+        .catalogue-row .cat { font-size: 0.8rem; color: var(--text-light); }
+        .catalogue-row .price { font-weight: 700; color: var(--primary); }
+        .catalogue-row .actions { display: flex; gap: 6px; }
 
         /* Toast */
         #toast {
@@ -245,12 +333,38 @@
         #toast.show { opacity: 1; transform: translateY(0); }
         #toast.success { background: var(--success); }
         #toast.error { background: var(--danger); }
+
+        /* Loader */
+        .loader {
+            display: inline-block;
+            width: 16px; height: 16px;
+            border: 2px solid #cbd5e1;
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Mobile responsive */
+        @media (max-width: 900px) {
+            .main-container { flex-direction: column; }
+            .menu-panel { border-right: none; }
+            .cart-panel {
+                min-width: unset;
+                max-width: unset;
+                border-left: none;
+                border-top: 1px solid var(--border);
+                max-height: 55vh;
+            }
+            .table-grid { grid-template-columns: repeat(5, 1fr); }
+        }
     </style>
 </head>
 <body>
     <header>
         <h1>🍽️ GSM Restaurant POS</h1>
         <div class="header-actions">
+            <button onclick="openCatalogueModal()">📖 Catalogue</button>
             <button onclick="openTransactionModal()">💰 Cashbook</button>
             <button onclick="openInventoryModal()">📦 Inventory</button>
             <button onclick="openSummaryModal()">📊 Summary</button>
@@ -260,27 +374,29 @@
     <div class="main-container">
         <!-- Menu -->
         <div class="menu-panel">
+            <div class="menu-header">
+                <h2>Menu</h2>
+                <button class="btn btn-primary btn-sm" onclick="openCatalogueModal()">+ Manage Menu</button>
+            </div>
             <div class="category-tabs" id="categoryTabs"></div>
-            <div class="menu-grid" id="menuGrid"></div>
+            <div class="menu-grid" id="menuGrid">
+                <p style="color:var(--text-light);"><span class="loader"></span> Loading menu…</p>
+            </div>
         </div>
 
         <!-- Cart -->
         <div class="cart-panel">
             <div class="cart-header">
                 <h3>Current Order</h3>
-                <button class="btn btn-outline" style="padding:6px 12px;font-size:0.85rem;" onclick="clearCart()">Clear</button>
+                <button class="btn btn-outline btn-sm" onclick="clearCart()">Clear</button>
             </div>
-            <div class="table-selector">
-                <label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:6px;">Table Number</label>
-                <select id="tableSelect">
-                    <option value="1">Table 1</option>
-                    <option value="2">Table 2</option>
-                    <option value="3">Table 3</option>
-                    <option value="4">Table 4</option>
-                    <option value="5">Table 5</option>
-                    <option value="T1">Takeaway 1</option>
-                </select>
+
+            <!-- Table grid picker -->
+            <div class="table-picker">
+                <label>SELECT TABLE</label>
+                <div class="table-grid" id="tableGrid"></div>
             </div>
+
             <div class="cart-items" id="cartItems">
                 <p style="color:var(--text-light);text-align:center;padding:40px 0;">No items added</p>
             </div>
@@ -289,13 +405,71 @@
                 <span id="cartTotal">₹0.00</span>
             </div>
             <div class="cart-actions">
-                <button class="btn btn-primary" onclick="placeOrder()">📋 Place Order & Print KOT</button>
+                <button class="btn btn-primary" onclick="placeOrder()">📋 Place Order &amp; Print KOT</button>
                 <button class="btn btn-success" onclick="openSettleModal()">✅ Settle Bill</button>
             </div>
         </div>
     </div>
 
-    <!-- Transaction Modal -->
+    <!-- ==================== CATALOGUE MODAL ==================== -->
+    <div class="modal-overlay" id="catalogueModal">
+        <div class="modal modal-lg">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                <h2 style="margin:0;">📖 Menu Catalogue</h2>
+                <button class="btn btn-primary btn-sm" onclick="openAddMenuItemModal()">+ Add Item</button>
+            </div>
+            <p style="color:var(--text-light);font-size:0.85rem;margin-bottom:12px;">
+                Add, edit, or remove items from your menu. Changes appear instantly.
+            </p>
+            <div class="catalogue-list" id="catalogueList">
+                <p style="color:var(--text-light);"><span class="loader"></span> Loading…</p>
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-outline" onclick="closeModal('catalogueModal')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== ADD / EDIT MENU ITEM ==================== -->
+    <div class="modal-overlay" id="addMenuItemModal">
+        <div class="modal">
+            <h2 id="menuItemModalTitle">➕ Add Menu Item</h2>
+            <input type="hidden" id="menuItemId">
+            <div class="form-group">
+                <label>Item Name *</label>
+                <input type="text" id="miName" placeholder="e.g. Paneer Butter Masala">
+            </div>
+            <div class="form-group">
+                <label>Category *</label>
+                <input type="text" id="miCategory" placeholder="e.g. Main Course" list="categorySuggestions">
+                <datalist id="categorySuggestions">
+                    <option value="Starters">
+                    <option value="Main Course">
+                    <option value="Breads">
+                    <option value="Rice">
+                    <option value="Beverages">
+                    <option value="Desserts">
+                    <option value="Chinese">
+                    <option value="Tandoor">
+                    <option value="South Indian">
+                </datalist>
+            </div>
+            <div class="form-group">
+                <label>Price (₹) *</label>
+                <input type="number" id="miPrice" step="0.01" placeholder="0.00">
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <textarea id="miDescription" rows="2" placeholder="Short description (optional)"></textarea>
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-outline" onclick="closeModal('addMenuItemModal')">Cancel</button>
+                <button class="btn btn-primary" id="menuItemSaveBtn" onclick="saveMenuItem()">Save Item</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== TRANSACTION MODAL ==================== -->
     <div class="modal-overlay" id="transactionModal">
         <div class="modal">
             <h2>💰 Add Cashbook Entry</h2>
@@ -322,16 +496,15 @@
         </div>
     </div>
 
-    <!-- Inventory Modal -->
+    <!-- ==================== INVENTORY MODAL ==================== -->
     <div class="modal-overlay" id="inventoryModal">
-        <div class="modal" style="max-width:800px;">
-            <h2>📦 Inventory Management</h2>
+        <div class="modal modal-lg">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-                <h4>Current Stock</h4>
-                <button class="btn btn-primary" style="padding:8px 16px;font-size:0.9rem;" onclick="openAddInventoryModal()">+ Add Item</button>
+                <h2 style="margin:0;">📦 Inventory</h2>
+                <button class="btn btn-primary btn-sm" onclick="openAddInventoryModal()">+ Add Item</button>
             </div>
             <div id="inventoryList" style="max-height:400px;overflow-y:auto;">
-                <p style="color:var(--text-light);">Loading...</p>
+                <p style="color:var(--text-light);"><span class="loader"></span> Loading…</p>
             </div>
             <div class="btn-group">
                 <button class="btn btn-outline" onclick="closeModal('inventoryModal')">Close</button>
@@ -339,7 +512,6 @@
         </div>
     </div>
 
-    <!-- Add Inventory Modal -->
     <div class="modal-overlay" id="addInventoryModal">
         <div class="modal">
             <h2>➕ Add Inventory Item</h2>
@@ -373,12 +545,12 @@
         </div>
     </div>
 
-    <!-- Summary Modal -->
+    <!-- ==================== SUMMARY MODAL ==================== -->
     <div class="modal-overlay" id="summaryModal">
-        <div class="modal" style="max-width:600px;">
+        <div class="modal">
             <h2>📊 Today's Summary</h2>
             <div id="summaryContent" style="line-height:2;font-size:1.05rem;">
-                <p>Loading...</p>
+                <p><span class="loader"></span> Loading…</p>
             </div>
             <div class="btn-group">
                 <button class="btn btn-outline" onclick="closeModal('summaryModal')">Close</button>
@@ -386,7 +558,7 @@
         </div>
     </div>
 
-    <!-- Settle Bill Modal -->
+    <!-- ==================== SETTLE BILL MODAL ==================== -->
     <div class="modal-overlay" id="settleModal">
         <div class="modal">
             <h2>✅ Settle Bill</h2>
@@ -408,7 +580,7 @@
             </div>
             <div class="btn-group">
                 <button class="btn btn-outline" onclick="closeModal('settleModal')">Cancel</button>
-                <button class="btn btn-success" onclick="settleBill()">Settle & Record</button>
+                <button class="btn btn-success" onclick="settleBill()">Settle &amp; Record</button>
             </div>
         </div>
     </div>
@@ -416,314 +588,547 @@
     <div id="toast"></div>
 
     <script>
-        // --- State ---
-        let cart = [];
-        let menuItems = [];
-        let allCategories = new Set();
+    // ============================================================
+    // SUPABASE CLIENT
+    // ============================================================
+    const SUPABASE_URL = 'https://xobgnbtjmlmoidphjcsm.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_bp1aoX8LoxlqJA0-D4j3vQ_OXs33BPN';
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // --- Init ---
-        document.addEventListener('DOMContentLoaded', () => {
+    // ============================================================
+    // STATE
+    // ============================================================
+    let cart = [];
+    let menuItems = [];
+    let allCategories = new Set();
+    let selectedTable = '1';
+    const TABLES = ['1','2','3','4','5','6','7','8','9','10'];
+    const TAKEAWAYS = ['T1','T2','T3'];
+
+    // ============================================================
+    // INIT
+    // ============================================================
+    document.addEventListener('DOMContentLoaded', () => {
+        renderTableGrid();
+        fetchMenu();
+        checkAndSeed();
+    });
+
+    async function checkAndSeed() {
+        // If menu is empty, seed with samples once
+        const { data, error } = await supabaseClient.from('menu_items').select('id').limit(1);
+        if (!error && (!data || data.length === 0)) {
+            await seedMenu();
             fetchMenu();
-        });
+        }
+    }
 
-        // --- Fetch Menu ---
-        async function fetchMenu() {
-            try {
-                const res = await fetch('/api/menu');
-                menuItems = await res.json();
-                if (menuItems.length === 0) {
-                    // Seed with sample data if empty
-                    await seedMenu();
-                    const res2 = await fetch('/api/menu');
-                    menuItems = await res2.json();
-                }
-                renderMenu();
-            } catch (err) {
-                showToast('Failed to load menu', 'error');
-            }
+    async function seedMenu() {
+        const samples = [
+            { name: 'Paneer Butter Masala', category: 'Main Course', price: 320, description: 'Creamy tomato gravy' },
+            { name: 'Dal Makhani',          category: 'Main Course', price: 280, description: 'Slow cooked black lentils' },
+            { name: 'Chicken Biryani',      category: 'Main Course', price: 380, description: 'Hyderabadi style' },
+            { name: 'Butter Naan',          category: 'Breads',      price: 60,  description: 'Tandoori naan' },
+            { name: 'Garlic Naan',          category: 'Breads',      price: 80,  description: 'With garlic' },
+            { name: 'Veg Fried Rice',       category: 'Rice',        price: 220, description: 'Indo-Chinese' },
+            { name: 'Chicken Fried Rice',   category: 'Rice',        price: 280, description: 'Wok tossed' },
+            { name: 'Masala Chai',          category: 'Beverages',   price: 50,  description: 'Indian spiced tea' },
+            { name: 'Sweet Lassi',          category: 'Beverages',   price: 90,  description: 'Yogurt drink' },
+            { name: 'Gulab Jamun',          category: 'Desserts',    price: 120, description: '2 pieces' },
+            { name: 'Rasmalai',             category: 'Desserts',    price: 150, description: '2 pieces' },
+            { name: 'Green Salad',          category: 'Starters',    price: 120, description: 'Fresh veggies' },
+            { name: 'Chicken Tikka',        category: 'Starters',    price: 350, description: '6 pieces' },
+            { name: 'Paneer Tikka',         category: 'Starters',    price: 300, description: '6 pieces' },
+        ];
+        await supabaseClient.from('menu_items').insert(samples);
+    }
+
+    // ============================================================
+    // TABLE GRID
+    // ============================================================
+    function renderTableGrid() {
+        const grid = document.getElementById('tableGrid');
+        let html = TABLES.map(t =>
+            `<button class="table-btn ${selectedTable === t ? 'active' : ''}" onclick="selectTable('${t}')">${t}</button>`
+        ).join('');
+        html += TAKEAWAYS.map(t =>
+            `<button class="table-btn takeaway ${selectedTable === t ? 'active' : ''}" onclick="selectTable('${t}')">${t}</button>`
+        ).join('');
+        grid.innerHTML = html;
+    }
+
+    function selectTable(t) {
+        selectedTable = t;
+        renderTableGrid();
+    }
+
+    // ============================================================
+    // MENU
+    // ============================================================
+    async function fetchMenu() {
+        const grid = document.getElementById('menuGrid');
+        grid.innerHTML = '<p style="color:var(--text-light);"><span class="loader"></span> Loading menu…</p>';
+        const { data, error } = await supabaseClient
+            .from('menu_items')
+            .select('*')
+            .order('category', { ascending: true })
+            .order('name', { ascending: true });
+
+        if (error) {
+            grid.innerHTML = '<p style="color:var(--danger);">Failed to load menu: ' + error.message + '</p>';
+            return;
+        }
+        menuItems = data || [];
+        renderMenu();
+    }
+
+    function renderMenu(filterCategory = 'All') {
+        const tabsContainer = document.getElementById('categoryTabs');
+        const grid = document.getElementById('menuGrid');
+
+        allCategories = new Set(menuItems.map(i => i.category));
+        const categories = ['All', ...allCategories];
+
+        tabsContainer.innerHTML = categories.map(cat =>
+            `<div class="category-tab ${cat === filterCategory ? 'active' : ''}"
+                  onclick="renderMenu('${cat.replace(/'/g, "\\'")}')">${cat}</div>`
+        ).join('');
+
+        const filtered = filterCategory === 'All'
+            ? menuItems
+            : menuItems.filter(i => i.category === filterCategory);
+
+        if (filtered.length === 0) {
+            grid.innerHTML = '<p style="color:var(--text-light);padding:20px;">No items in this category. Add some via "Manage Menu".</p>';
+            return;
         }
 
-        async function seedMenu() {
-            const samples = [
-                { name: 'Paneer Butter Masala', category: 'Main Course', price: 320, description: 'Creamy tomato gravy' },
-                { name: 'Dal Makhani', category: 'Main Course', price: 280, description: 'Slow cooked black lentils' },
-                { name: 'Chicken Biryani', category: 'Main Course', price: 380, description: 'Hyderabadi style' },
-                { name: 'Butter Naan', category: 'Breads', price: 60, description: 'Tandoori naan' },
-                { name: 'Garlic Naan', category: 'Breads', price: 80, description: 'With garlic' },
-                { name: 'Veg Fried Rice', category: 'Rice', price: 220, description: 'Indo-Chinese' },
-                { name: 'Chicken Fried Rice', category: 'Rice', price: 280, description: 'Wok tossed' },
-                { name: 'Masala Chai', category: 'Beverages', price: 50, description: 'Indian spiced tea' },
-                { name: 'Sweet Lassi', category: 'Beverages', price: 90, description: 'Yogurt drink' },
-                { name: 'Gulab Jamun', category: 'Desserts', price: 120, description: '2 pieces' },
-                { name: 'Rasmalai', category: 'Desserts', price: 150, description: '2 pieces' },
-                { name: 'Green Salad', category: 'Starters', price: 120, description: 'Fresh veggies' },
-                { name: 'Chicken Tikka', category: 'Starters', price: 350, description: '6 pieces' },
-                { name: 'Paneer Tikka', category: 'Starters', price: 300, description: '6 pieces' },
-            ];
-            for (const item of samples) {
-                await fetch('/api/menu', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(item)
-                });
-            }
+        grid.innerHTML = filtered.map(item => `
+            <div class="menu-item-card" onclick="addToCart(${item.id})">
+                <h4>${escapeHtml(item.name)}</h4>
+                <div class="price">₹${Number(item.price).toFixed(2)}</div>
+                ${item.description ? `<div class="desc">${escapeHtml(item.description)}</div>` : ''}
+                <span class="cat-badge">${escapeHtml(item.category)}</span>
+            </div>
+        `).join('');
+    }
+
+    // ============================================================
+    // CATALOGUE MANAGEMENT
+    // ============================================================
+    async function openCatalogueModal() {
+        document.getElementById('catalogueModal').classList.add('active');
+        await renderCatalogue();
+    }
+
+    async function renderCatalogue() {
+        const list = document.getElementById('catalogueList');
+        list.innerHTML = '<p style="color:var(--text-light);"><span class="loader"></span> Loading…</p>';
+
+        const { data, error } = await supabaseClient
+            .from('menu_items')
+            .select('*')
+            .order('category')
+            .order('name');
+
+        if (error) {
+            list.innerHTML = '<p style="color:var(--danger);">Failed: ' + error.message + '</p>';
+            return;
         }
 
-        // --- Render Menu ---
-        function renderMenu(filterCategory = 'All') {
-            const tabsContainer = document.getElementById('categoryTabs');
-            const grid = document.getElementById('menuGrid');
+        if (!data || data.length === 0) {
+            list.innerHTML = '<p style="color:var(--text-light);text-align:center;padding:20px;">No items yet. Add one!</p>';
+            return;
+        }
 
-            allCategories = new Set(menuItems.map(i => i.category));
-            const categories = ['All', ...allCategories];
+        list.innerHTML = data.map(item => `
+            <div class="catalogue-row">
+                <div>
+                    <div class="name">${escapeHtml(item.name)}</div>
+                    <div class="cat">${escapeHtml(item.category)}</div>
+                </div>
+                <div class="price">₹${Number(item.price).toFixed(2)}</div>
+                <div></div>
+                <div class="actions">
+                    <button class="btn btn-outline btn-sm" onclick="editMenuItem(${item.id})">Edit</button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteMenuItem(${item.id}, '${escapeHtml(item.name).replace(/'/g, "\\'")}')">Delete</button>
+                </div>
+            </div>
+        `).join('');
+    }
 
-            tabsContainer.innerHTML = categories.map(cat =>
-                `<div class="category-tab ${cat === filterCategory ? 'active' : ''}"
-                      onclick="renderMenu('${cat}')">${cat}</div>`
-            ).join('');
+    function openAddMenuItemModal() {
+        document.getElementById('menuItemModalTitle').textContent = '➕ Add Menu Item';
+        document.getElementById('menuItemId').value = '';
+        document.getElementById('miName').value = '';
+        document.getElementById('miCategory').value = '';
+        document.getElementById('miPrice').value = '';
+        document.getElementById('miDescription').value = '';
+        document.getElementById('addMenuItemModal').classList.add('active');
+    }
 
-            const filtered = filterCategory === 'All'
-                ? menuItems
-                : menuItems.filter(i => i.category === filterCategory);
+    async function editMenuItem(id) {
+        const item = menuItems.find(i => i.id === id);
+        if (!item) return;
+        document.getElementById('menuItemModalTitle').textContent = '✏️ Edit Menu Item';
+        document.getElementById('menuItemId').value = item.id;
+        document.getElementById('miName').value = item.name;
+        document.getElementById('miCategory').value = item.category;
+        document.getElementById('miPrice').value = item.price;
+        document.getElementById('miDescription').value = item.description || '';
+        document.getElementById('addMenuItemModal').classList.add('active');
+    }
 
-            grid.innerHTML = filtered.map(item => `
-                <div class="menu-item-card" onclick="addToCart(${item.id})">
-                    <h4>${item.name}</h4>
-                    <div class="price">₹${item.price.toFixed(2)}</div>
-                    <div style="font-size:0.75rem;color:var(--text-light);margin-top:4px;">${item.description || ''}</div>
+    async function saveMenuItem() {
+        const id = document.getElementById('menuItemId').value;
+        const name = document.getElementById('miName').value.trim();
+        const category = document.getElementById('miCategory').value.trim();
+        const price = parseFloat(document.getElementById('miPrice').value);
+        const description = document.getElementById('miDescription').value.trim();
+
+        if (!name || !category || isNaN(price) || price < 0) {
+            showToast('Please fill Name, Category, and a valid Price', 'error');
+            return;
+        }
+
+        const btn = document.getElementById('menuItemSaveBtn');
+        btn.disabled = true;
+        btn.textContent = 'Saving…';
+
+        let result;
+        if (id) {
+            result = await supabaseClient
+                .from('menu_items')
+                .update({ name, category, price, description })
+                .eq('id', id);
+        } else {
+            result = await supabaseClient
+                .from('menu_items')
+                .insert([{ name, category, price, description }]);
+        }
+
+        btn.disabled = false;
+        btn.textContent = 'Save Item';
+
+        if (result.error) {
+            showToast('Save failed: ' + result.error.message, 'error');
+            return;
+        }
+
+        showToast(id ? 'Item updated' : 'Item added', 'success');
+        closeModal('addMenuItemModal');
+        await fetchMenu();
+        await renderCatalogue();
+    }
+
+    async function deleteMenuItem(id, name) {
+        if (!confirm(`Delete "${name}" from the menu?`)) return;
+        const { error } = await supabaseClient.from('menu_items').delete().eq('id', id);
+        if (error) {
+            showToast('Delete failed: ' + error.message, 'error');
+            return;
+        }
+        showToast('Item deleted', 'success');
+        await fetchMenu();
+        await renderCatalogue();
+    }
+
+    // ============================================================
+    // CART
+    // ============================================================
+    function addToCart(itemId) {
+        const item = menuItems.find(i => i.id === itemId);
+        if (!item) return;
+        const existing = cart.find(c => c.id === itemId);
+        if (existing) existing.qty++;
+        else cart.push({ ...item, qty: 1 });
+        renderCart();
+    }
+
+    function removeFromCart(itemId) {
+        const idx = cart.findIndex(c => c.id === itemId);
+        if (idx === -1) return;
+        if (cart[idx].qty > 1) cart[idx].qty--;
+        else cart.splice(idx, 1);
+        renderCart();
+    }
+
+    function clearCart() {
+        cart = [];
+        renderCart();
+    }
+
+    function renderCart() {
+        const container = document.getElementById('cartItems');
+        if (cart.length === 0) {
+            container.innerHTML = '<p style="color:var(--text-light);text-align:center;padding:40px 0;">No items added</p>';
+        } else {
+            container.innerHTML = cart.map(item => `
+                <div class="cart-item">
+                    <div class="cart-item-info">
+                        <h5>${escapeHtml(item.name)}</h5>
+                        <span>₹${Number(item.price).toFixed(2)} × ${item.qty}</span>
+                    </div>
+                    <div class="cart-item-controls">
+                        <button onclick="removeFromCart(${item.id})">−</button>
+                        <span>${item.qty}</span>
+                        <button onclick="addToCart(${item.id})">+</button>
+                    </div>
                 </div>
             `).join('');
         }
+        const total = cart.reduce((sum, item) => sum + (Number(item.price) * item.qty), 0);
+        document.getElementById('cartTotal').textContent = `₹${total.toFixed(2)}`;
+    }
 
-        // --- Cart ---
-        function addToCart(itemId) {
-            const item = menuItems.find(i => i.id === itemId);
-            if (!item) return;
-            const existing = cart.find(c => c.id === itemId);
-            if (existing) {
-                existing.qty++;
-            } else {
-                cart.push({ ...item, qty: 1 });
-            }
-            renderCart();
+    // ============================================================
+    // PLACE ORDER → Supabase INSERT → realtime print agent picks up
+    // ============================================================
+    async function placeOrder() {
+        if (cart.length === 0) {
+            showToast('Cart is empty', 'error');
+            return;
         }
 
-        function removeFromCart(itemId) {
-            const idx = cart.findIndex(c => c.id === itemId);
-            if (idx === -1) return;
-            if (cart[idx].qty > 1) {
-                cart[idx].qty--;
-            } else {
-                cart.splice(idx, 1);
-            }
-            renderCart();
+        const total = cart.reduce((sum, item) => sum + (Number(item.price) * item.qty), 0);
+        const orderPayload = {
+            table_no: selectedTable,
+            items: cart.map(c => ({
+                id: c.id,
+                name: c.name,
+                price: c.price,
+                qty: c.qty
+            })),
+            total: total,
+            status: 'pending'
+        };
+
+        const { data, error } = await supabaseClient
+            .from('orders')
+            .insert([orderPayload])
+            .select()
+            .single();
+
+        if (error) {
+            showToast('Failed to place order: ' + error.message, 'error');
+            return;
         }
 
-        function clearCart() {
-            cart = [];
-            renderCart();
+        showToast(`Order #${data.id} placed — KOT printing…`, 'success');
+        clearCart();
+    }
+
+    // ============================================================
+    // TRANSACTIONS
+    // ============================================================
+    function openTransactionModal() {
+        document.getElementById('transactionModal').classList.add('active');
+    }
+
+    async function submitTransaction() {
+        const type = document.getElementById('txnType').value;
+        const amount = parseFloat(document.getElementById('txnAmount').value);
+        const description = document.getElementById('txnDesc').value;
+
+        if (!amount || amount <= 0) {
+            showToast('Enter a valid amount', 'error');
+            return;
         }
 
-        function renderCart() {
-            const container = document.getElementById('cartItems');
-            if (cart.length === 0) {
-                container.innerHTML = '<p style="color:var(--text-light);text-align:center;padding:40px 0;">No items added</p>';
-            } else {
-                container.innerHTML = cart.map(item => `
-                    <div class="cart-item">
-                        <div class="cart-item-info">
-                            <h5>${item.name}</h5>
-                            <span>₹${item.price.toFixed(2)} × ${item.qty}</span>
-                        </div>
-                        <div class="cart-item-controls">
-                            <button onclick="removeFromCart(${item.id})">−</button>
-                            <span>${item.qty}</span>
-                            <button onclick="addToCart(${item.id})">+</button>
-                        </div>
-                    </div>
-                `).join('');
-            }
-            const total = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
-            document.getElementById('cartTotal').textContent = `₹${total.toFixed(2)}`;
+        const { error } = await supabaseClient
+            .from('transactions')
+            .insert([{ type, amount, description }]);
+
+        if (error) {
+            showToast('Failed: ' + error.message, 'error');
+            return;
         }
 
-        // --- Place Order ---
-        async function placeOrder() {
-            if (cart.length === 0) {
-                showToast('Cart is empty', 'error');
-                return;
-            }
-            const table_no = document.getElementById('tableSelect').value;
-            try {
-                const res = await fetch('/api/orders', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ table_no, items: cart })
-                });
-                const data = await res.json();
-                if (res.ok) {
-                    showToast(`Order #${data.id} placed & KOT sent to printer!`, 'success');
-                    clearCart();
-                } else {
-                    showToast(data.error || 'Failed to place order', 'error');
-                }
-            } catch (err) {
-                showToast('Network error. Is the print agent running?', 'error');
-            }
+        showToast('Transaction recorded', 'success');
+        closeModal('transactionModal');
+        document.getElementById('txnAmount').value = '';
+        document.getElementById('txnDesc').value = '';
+    }
+
+    // ============================================================
+    // INVENTORY
+    // ============================================================
+    async function openInventoryModal() {
+        document.getElementById('inventoryModal').classList.add('active');
+        const list = document.getElementById('inventoryList');
+        list.innerHTML = '<p style="color:var(--text-light);"><span class="loader"></span> Loading…</p>';
+
+        const { data, error } = await supabaseClient
+            .from('inventory')
+            .select('*')
+            .order('item_name');
+
+        if (error) {
+            list.innerHTML = '<p style="color:var(--danger);">Failed: ' + error.message + '</p>';
+            return;
         }
 
-        // --- Transactions ---
-        function openTransactionModal() {
-            document.getElementById('transactionModal').classList.add('active');
+        if (!data || data.length === 0) {
+            list.innerHTML = '<p style="color:var(--text-light);text-align:center;padding:20px;">No inventory items. Add one!</p>';
+            return;
         }
 
-        async function submitTransaction() {
-            const type = document.getElementById('txnType').value;
-            const amount = parseFloat(document.getElementById('txnAmount').value);
-            const description = document.getElementById('txnDesc').value;
-            if (!amount || amount <= 0) { showToast('Enter a valid amount', 'error'); return; }
-            try {
-                await fetch('/api/transactions', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ type, amount, description })
-                });
-                showToast('Transaction recorded', 'success');
-                closeModal('transactionModal');
-                document.getElementById('txnAmount').value = '';
-                document.getElementById('txnDesc').value = '';
-            } catch (err) {
-                showToast('Failed to record transaction', 'error');
-            }
+        list.innerHTML = data.map(item => `
+            <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);">
+                <div>
+                    <strong>${escapeHtml(item.item_name)}</strong>
+                    <span style="color:var(--text-light);font-size:0.85rem;margin-left:8px;">${item.quantity} ${item.unit || ''}</span>
+                </div>
+                ${Number(item.quantity) <= Number(item.low_stock_threshold || 0)
+                    ? '<span style="color:var(--danger);font-weight:600;font-size:0.85rem;">⚠️ Low Stock</span>'
+                    : ''}
+            </div>
+        `).join('');
+    }
+
+    function openAddInventoryModal() {
+        document.getElementById('addInventoryModal').classList.add('active');
+    }
+
+    async function submitInventory() {
+        const item_name = document.getElementById('invName').value.trim();
+        const quantity = parseFloat(document.getElementById('invQty').value);
+        const unit = document.getElementById('invUnit').value;
+        const low_stock_threshold = parseFloat(document.getElementById('invThreshold').value) || 0;
+
+        if (!item_name || isNaN(quantity)) {
+            showToast('Fill all fields', 'error');
+            return;
         }
 
-        // --- Inventory ---
-        async function openInventoryModal() {
-            document.getElementById('inventoryModal').classList.add('active');
-            try {
-                const res = await fetch('/api/inventory');
-                const items = await res.json();
-                const list = document.getElementById('inventoryList');
-                if (items.length === 0) {
-                    list.innerHTML = '<p style="color:var(--text-light);text-align:center;padding:20px;">No inventory items. Add one!</p>';
-                } else {
-                    list.innerHTML = items.map(item => `
-                        <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);">
-                            <div>
-                                <strong>${item.item_name}</strong>
-                                <span style="color:var(--text-light);font-size:0.85rem;margin-left:8px;">${item.quantity} ${item.unit}</span>
-                            </div>
-                            ${item.quantity <= item.low_stock_threshold
-                                ? '<span style="color:var(--danger);font-weight:600;font-size:0.85rem;">⚠️ Low Stock</span>'
-                                : ''}
-                        </div>
-                    `).join('');
-                }
-            } catch (err) {
-                document.getElementById('inventoryList').innerHTML = '<p style="color:var(--danger);">Failed to load inventory</p>';
-            }
+        const { error } = await supabaseClient
+            .from('inventory')
+            .insert([{ item_name, quantity, unit, low_stock_threshold }]);
+
+        if (error) {
+            showToast('Failed: ' + error.message, 'error');
+            return;
         }
 
-        function openAddInventoryModal() {
-            document.getElementById('addInventoryModal').classList.add('active');
+        showToast('Inventory item added', 'success');
+        closeModal('addInventoryModal');
+        openInventoryModal();
+    }
+
+    // ============================================================
+    // SUMMARY (fetch today's data, compute in JS)
+    // ============================================================
+    async function openSummaryModal() {
+        document.getElementById('summaryModal').classList.add('active');
+        const box = document.getElementById('summaryContent');
+        box.innerHTML = '<p><span class="loader"></span> Loading…</p>';
+
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0);
+        const iso = startOfDay.toISOString();
+
+        const [txnRes, tipRes, ordRes] = await Promise.all([
+            supabaseClient.from('transactions').select('type, amount').gte('created_at', iso),
+            supabaseClient.from('tips').select('amount').gte('created_at', iso),
+            supabaseClient.from('orders').select('total').gte('created_at', iso)
+        ]);
+
+        if (txnRes.error || tipRes.error || ordRes.error) {
+            box.innerHTML = '<p style="color:var(--danger);">Failed to load summary</p>';
+            return;
         }
 
-        async function submitInventory() {
-            const item_name = document.getElementById('invName').value;
-            const quantity = parseFloat(document.getElementById('invQty').value);
-            const unit = document.getElementById('invUnit').value;
-            const low_stock_threshold = parseFloat(document.getElementById('invThreshold').value) || 0;
-            if (!item_name || !quantity) { showToast('Fill all fields', 'error'); return; }
-            try {
-                await fetch('/api/inventory', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ item_name, quantity, unit, low_stock_threshold })
-                });
-                showToast('Inventory item added', 'success');
-                closeModal('addInventoryModal');
-                openInventoryModal();
-            } catch (err) {
-                showToast('Failed to add item', 'error');
-            }
+        const cash = (txnRes.data || []).filter(t => t.type === 'cash_in').reduce((s, t) => s + Number(t.amount), 0);
+        const upi  = (txnRes.data || []).filter(t => t.type === 'upi_in').reduce((s, t) => s + Number(t.amount), 0);
+        const exp  = (txnRes.data || []).filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0);
+        const tips = (tipRes.data || []).reduce((s, t) => s + Number(t.amount), 0);
+        const sales = (ordRes.data || []).reduce((s, o) => s + Number(o.total), 0);
+
+        box.innerHTML = `
+            <div style="display:flex;justify-content:space-between;"><span>💵 Cash In:</span><strong>₹${cash.toFixed(2)}</strong></div>
+            <div style="display:flex;justify-content:space-between;"><span>📱 UPI In:</span><strong>₹${upi.toFixed(2)}</strong></div>
+            <div style="display:flex;justify-content:space-between;"><span>💸 Expenses:</span><strong style="color:var(--danger);">₹${exp.toFixed(2)}</strong></div>
+            <div style="display:flex;justify-content:space-between;"><span>🎁 Tips:</span><strong>₹${tips.toFixed(2)}</strong></div>
+            <hr style="margin:10px 0;border:none;border-top:1px solid var(--border);">
+            <div style="display:flex;justify-content:space-between;"><span>🧾 Total Sales:</span><strong>₹${sales.toFixed(2)}</strong></div>
+            <div style="display:flex;justify-content:space-between;font-size:1.2rem;"><span>💰 Net (Sales − Expenses):</span><strong style="color:var(--success);">₹${(sales - exp).toFixed(2)}</strong></div>
+        `;
+    }
+
+    // ============================================================
+    // SETTLE BILL
+    // ============================================================
+    function openSettleModal() {
+        if (cart.length === 0) {
+            showToast('Cart is empty', 'error');
+            return;
+        }
+        const total = cart.reduce((sum, item) => sum + (Number(item.price) * item.qty), 0);
+        document.getElementById('settleTotal').textContent = `₹${total.toFixed(2)}`;
+        document.getElementById('settleModal').classList.add('active');
+    }
+
+    async function settleBill() {
+        const mode = document.getElementById('settleMode').value;
+        const tip = parseFloat(document.getElementById('settleTip').value) || 0;
+        const staff = document.getElementById('settleStaff').value.trim();
+        const total = cart.reduce((sum, item) => sum + (Number(item.price) * item.qty), 0);
+        const type = mode === 'cash' ? 'cash_in' : 'upi_in';
+
+        const { error: txnErr } = await supabaseClient.from('transactions').insert([{
+            type,
+            amount: total,
+            description: `Bill for Table ${selectedTable}`
+        }]);
+
+        if (txnErr) {
+            showToast('Failed to record payment: ' + txnErr.message, 'error');
+            return;
         }
 
-        // --- Summary ---
-        async function openSummaryModal() {
-            document.getElementById('summaryModal').classList.add('active');
-            try {
-                const res = await fetch('/api/summary/today');
-                const data = await res.json();
-                document.getElementById('summaryContent').innerHTML = `
-                    <div style="display:flex;justify-content:space-between;"><span>💵 Cash In:</span><strong>₹${(data.cash_total || 0).toFixed(2)}</strong></div>
-                    <div style="display:flex;justify-content:space-between;"><span>📱 UPI In:</span><strong>₹${(data.upi_total || 0).toFixed(2)}</strong></div>
-                    <div style="display:flex;justify-content:space-between;"><span>💸 Expenses:</span><strong style="color:var(--danger);">₹${(data.expense_total || 0).toFixed(2)}</strong></div>
-                    <div style="display:flex;justify-content:space-between;"><span>🎁 Tips:</span><strong>₹${(data.tips_total || 0).toFixed(2)}</strong></div>
-                    <hr style="margin:10px 0;border:none;border-top:1px solid var(--border);">
-                    <div style="display:flex;justify-content:space-between;"><span>🧾 Total Sales:</span><strong>₹${(data.total_sales || 0).toFixed(2)}</strong></div>
-                    <div style="display:flex;justify-content:space-between;font-size:1.2rem;"><span>💰 Net (Sales - Expenses):</span><strong style="color:var(--success);">₹${((data.total_sales || 0) - (data.expense_total || 0)).toFixed(2)}</strong></div>
-                `;
-            } catch (err) {
-                document.getElementById('summaryContent').innerHTML = '<p style="color:var(--danger);">Failed to load summary</p>';
-            }
+        if (tip > 0) {
+            const { error: tipErr } = await supabaseClient.from('tips').insert([{
+                amount: tip,
+                staff_name: staff
+            }]);
+            if (tipErr) console.warn('Tip save failed:', tipErr.message);
         }
 
-        // --- Settle Bill ---
-        function openSettleModal() {
-            if (cart.length === 0) { showToast('Cart is empty', 'error'); return; }
-            const total = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
-            document.getElementById('settleTotal').textContent = `₹${total.toFixed(2)}`;
-            document.getElementById('settleModal').classList.add('active');
-        }
+        showToast(`Bill settled: ₹${total.toFixed(2)} via ${mode.toUpperCase()}`, 'success');
+        closeModal('settleModal');
+        clearCart();
+    }
 
-        async function settleBill() {
-            const mode = document.getElementById('settleMode').value;
-            const tip = parseFloat(document.getElementById('settleTip').value) || 0;
-            const staff = document.getElementById('settleStaff').value;
-            const total = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
-            const type = mode === 'cash' ? 'cash_in' : 'upi_in';
+    // ============================================================
+    // HELPERS
+    // ============================================================
+    function closeModal(id) {
+        document.getElementById(id).classList.remove('active');
+    }
 
-            try {
-                // Record payment
-                await fetch('/api/transactions', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ type, amount: total, description: `Bill for Table ${document.getElementById('tableSelect').value}` })
-                });
-                // Record tip if any
-                if (tip > 0) {
-                    await fetch('/api/tips', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ amount: tip, staff_name: staff })
-                    });
-                }
-                showToast(`Bill settled: ₹${total.toFixed(2)} via ${mode.toUpperCase()}`, 'success');
-                closeModal('settleModal');
-                clearCart();
-            } catch (err) {
-                showToast('Failed to settle bill', 'error');
-            }
-        }
+    function showToast(message, type = '') {
+        const toast = document.getElementById('toast');
+        toast.textContent = message;
+        toast.className = 'show ' + type;
+        setTimeout(() => { toast.className = ''; }, 3000);
+    }
 
-        // --- UI Helpers ---
-        function closeModal(id) {
-            document.getElementById(id).classList.remove('active');
-        }
+    function escapeHtml(str) {
+        if (str === null || str === undefined) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
 
-        function showToast(message, type = '') {
-            const toast = document.getElementById('toast');
-            toast.textContent = message;
-            toast.className = 'show ' + type;
-            setTimeout(() => { toast.className = ''; }, 3000);
-        }
-
-        // Close modals on overlay click
-        document.querySelectorAll('.modal-overlay').forEach(overlay => {
-            overlay.addEventListener('click', (e) => {
-                if (e.target === overlay) overlay.classList.remove('active');
-            });
+    // Close modals on overlay click
+    document.querySelectorAll('.modal-overlay').forEach(overlay => {
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) overlay.classList.remove('active');
         });
+    });
     </script>
 </body>
 </html>
