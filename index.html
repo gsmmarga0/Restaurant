@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GSM Restaurant POS</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --success: #16a34a;
+            --danger: #dc2626;
+            --bg: #f1f5f9;
+            --card-bg: #ffffff;
+            --text: #1e293b;
+            --text-light: #64748b;
+            --border: #e2e8f0;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        header {
+            background: var(--primary);
+            color: white;
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            z-index: 10;
+        }
+        header h1 { font-size: 1.5rem; font-weight: 700; }
+        .header-actions { display: flex; gap: 12px; align-items: center; }
+        .header-actions button {
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+        .header-actions button:hover { background: rgba(255,255,255,0.3); }
+        .main-container { display: flex; flex: 1; overflow: hidden; }
+
+        /* Left: Menu */
+        .menu-panel {
+            flex: 2;
+            padding: 20px;
+            overflow-y: auto;
+            border-right: 1px solid var(--border);
+            background: var(--bg);
+        }
+        .category-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .category-tab {
+            padding: 8px 20px;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+        .category-tab.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 12px;
+        }
+        .menu-item-card {
+            background: var(--card-bg);
+            border-radius: 10px;
+            padding: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+            cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.15s;
+            border: 1px solid var(--border);
+        }
+        .menu-item-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .menu-item-card h4 { font-size: 0.95rem; margin-bottom: 4px; }
+        .menu-item-card .price { color: var(--primary); font-weight: 700; }
+
+        /* Right: Cart & Actions */
+        .cart-panel {
+            flex: 1;
+            min-width: 340px;
+            background: var(--card-bg);
+            display: flex;
+            flex-direction: column;
+            border-left: 1px solid var(--border);
+        }
+        .cart-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .cart-header h3 { font-size: 1.1rem; }
+        .table-selector {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+        }
+        .table-selector select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 1rem;
+            font-family: inherit;
+        }
+        .cart-items {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px 20px;
+        }
+        .cart-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .cart-item-info { flex: 1; }
+        .cart-item-info h5 { font-size: 0.9rem; }
+        .cart-item-info span { font-size: 0.8rem; color: var(--text-light); }
+        .cart-item-controls { display: flex; align-items: center; gap: 8px; }
+        .cart-item-controls button {
+            width: 28px; height: 28px;
+            border-radius: 50%;
+            border: 1px solid var(--border);
+            background: var(--bg);
+            cursor: pointer;
+            font-weight: 700;
+            display: grid;
+            place-items: center;
+        }
+        .cart-total {
+            padding: 16px 20px;
+            border-top: 2px solid var(--border);
+            font-size: 1.3rem;
+            font-weight: 700;
+            display: flex;
+            justify-content: space-between;
+        }
+        .cart-actions {
+            padding: 16px 20px;
+            border-top: 1px solid var(--border);
+            display: grid;
+            gap: 10px;
+        }
+        .btn {
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: inherit;
+            transition: background 0.2s;
+        }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-dark); }
+        .btn-success { background: var(--success); color: white; }
+        .btn-success:hover { background: #15803d; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-danger:hover { background: #b91c1c; }
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text);
+        }
+        .btn-outline:hover { background: var(--bg); }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            place-items: center;
+            z-index: 100;
+        }
+        .modal-overlay.active { display: grid; }
+        .modal {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 24px;
+            width: 90%; max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .modal h2 { margin-bottom: 16px; }
+        .modal .form-group { margin-bottom: 12px; }
+        .modal label { display: block; font-weight: 600; margin-bottom: 4px; font-size: 0.9rem; }
+        .modal input, .modal select, .modal textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 1rem;
+        }
+        .modal .btn-group { display: flex; gap: 10px; margin-top: 16px; }
+        .modal .btn-group .btn { flex: 1; }
+        .payment-options { display: flex; gap: 10px; margin-top: 10px; }
+        .payment-options .btn { flex: 1; }
+
+        /* Toast */
+        #toast {
+            position: fixed;
+            bottom: 24px; right: 24px;
+            background: #1e293b;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.3s, transform 0.3s;
+            z-index: 200;
+            pointer-events: none;
+        }
+        #toast.show { opacity: 1; transform: translateY(0); }
+        #toast.success { background: var(--success); }
+        #toast.error { background: var(--danger); }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🍽️ GSM Restaurant POS</h1>
+        <div class="header-actions">
+            <button onclick="openTransactionModal()">💰 Cashbook</button>
+            <button onclick="openInventoryModal()">📦 Inventory</button>
+            <button onclick="openSummaryModal()">📊 Summary</button>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <!-- Menu -->
+        <div class="menu-panel">
+            <div class="category-tabs" id="categoryTabs"></div>
+            <div class="menu-grid" id="menuGrid"></div>
+        </div>
+
+        <!-- Cart -->
+        <div class="cart-panel">
+            <div class="cart-header">
+                <h3>Current Order</h3>
+                <button class="btn btn-outline" style="padding:6px 12px;font-size:0.85rem;" onclick="clearCart()">Clear</button>
+            </div>
+            <div class="table-selector">
+                <label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:6px;">Table Number</label>
+                <select id="tableSelect">
+                    <option value="1">Table 1</option>
+                    <option value="2">Table 2</option>
+                    <option value="3">Table 3</option>
+                    <option value="4">Table 4</option>
+                    <option value="5">Table 5</option>
+                    <option value="T1">Takeaway 1</option>
+                </select>
+            </div>
+            <div class="cart-items" id="cartItems">
+                <p style="color:var(--text-light);text-align:center;padding:40px 0;">No items added</p>
+            </div>
+            <div class="cart-total">
+                <span>Total</span>
+                <span id="cartTotal">₹0.00</span>
+            </div>
+            <div class="cart-actions">
+                <button class="btn btn-primary" onclick="placeOrder()">📋 Place Order & Print KOT</button>
+                <button class="btn btn-success" onclick="openSettleModal()">✅ Settle Bill</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Transaction Modal -->
+    <div class="modal-overlay" id="transactionModal">
+        <div class="modal">
+            <h2>💰 Add Cashbook Entry</h2>
+            <div class="form-group">
+                <label>Type</label>
+                <select id="txnType">
+                    <option value="cash_in">Cash In</option>
+                    <option value="upi_in">UPI In</option>
+                    <option value="expense">Expense</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Amount (₹)</label>
+                <input type="number" id="txnAmount" placeholder="0.00" step="0.01">
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <input type="text" id="txnDesc" placeholder="e.g. Vegetables, Petty cash">
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-outline" onclick="closeModal('transactionModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="submitTransaction()">Add Entry</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Inventory Modal -->
+    <div class="modal-overlay" id="inventoryModal">
+        <div class="modal" style="max-width:800px;">
+            <h2>📦 Inventory Management</h2>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                <h4>Current Stock</h4>
+                <button class="btn btn-primary" style="padding:8px 16px;font-size:0.9rem;" onclick="openAddInventoryModal()">+ Add Item</button>
+            </div>
+            <div id="inventoryList" style="max-height:400px;overflow-y:auto;">
+                <p style="color:var(--text-light);">Loading...</p>
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-outline" onclick="closeModal('inventoryModal')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Inventory Modal -->
+    <div class="modal-overlay" id="addInventoryModal">
+        <div class="modal">
+            <h2>➕ Add Inventory Item</h2>
+            <div class="form-group">
+                <label>Item Name</label>
+                <input type="text" id="invName" placeholder="e.g. Tomatoes">
+            </div>
+            <div class="form-group">
+                <label>Quantity</label>
+                <input type="number" id="invQty" placeholder="0" step="0.01">
+            </div>
+            <div class="form-group">
+                <label>Unit</label>
+                <select id="invUnit">
+                    <option value="kg">kg</option>
+                    <option value="g">g</option>
+                    <option value="L">L</option>
+                    <option value="ml">ml</option>
+                    <option value="pcs">pcs</option>
+                    <option value="pack">pack</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Low Stock Alert Below</label>
+                <input type="number" id="invThreshold" placeholder="e.g. 5" step="0.01">
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-outline" onclick="closeModal('addInventoryModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="submitInventory()">Add Item</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Modal -->
+    <div class="modal-overlay" id="summaryModal">
+        <div class="modal" style="max-width:600px;">
+            <h2>📊 Today's Summary</h2>
+            <div id="summaryContent" style="line-height:2;font-size:1.05rem;">
+                <p>Loading...</p>
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-outline" onclick="closeModal('summaryModal')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settle Bill Modal -->
+    <div class="modal-overlay" id="settleModal">
+        <div class="modal">
+            <h2>✅ Settle Bill</h2>
+            <p style="font-size:1.5rem;font-weight:700;text-align:center;margin:16px 0;" id="settleTotal">₹0.00</p>
+            <div class="form-group">
+                <label>Payment Mode</label>
+                <select id="settleMode">
+                    <option value="cash">Cash</option>
+                    <option value="upi">UPI</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Tip Amount (₹)</label>
+                <input type="number" id="settleTip" placeholder="0.00" step="0.01" value="0">
+            </div>
+            <div class="form-group">
+                <label>Tip to Staff (optional)</label>
+                <input type="text" id="settleStaff" placeholder="Staff name">
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-outline" onclick="closeModal('settleModal')">Cancel</button>
+                <button class="btn btn-success" onclick="settleBill()">Settle & Record</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast"></div>
+
+    <script>
+        // --- State ---
+        let cart = [];
+        let menuItems = [];
+        let allCategories = new Set();
+
+        // --- Init ---
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchMenu();
+        });
+
+        // --- Fetch Menu ---
+        async function fetchMenu() {
+            try {
+                const res = await fetch('/api/menu');
+                menuItems = await res.json();
+                if (menuItems.length === 0) {
+                    // Seed with sample data if empty
+                    await seedMenu();
+                    const res2 = await fetch('/api/menu');
+                    menuItems = await res2.json();
+                }
+                renderMenu();
+            } catch (err) {
+                showToast('Failed to load menu', 'error');
+            }
+        }
+
+        async function seedMenu() {
+            const samples = [
+                { name: 'Paneer Butter Masala', category: 'Main Course', price: 320, description: 'Creamy tomato gravy' },
+                { name: 'Dal Makhani', category: 'Main Course', price: 280, description: 'Slow cooked black lentils' },
+                { name: 'Chicken Biryani', category: 'Main Course', price: 380, description: 'Hyderabadi style' },
+                { name: 'Butter Naan', category: 'Breads', price: 60, description: 'Tandoori naan' },
+                { name: 'Garlic Naan', category: 'Breads', price: 80, description: 'With garlic' },
+                { name: 'Veg Fried Rice', category: 'Rice', price: 220, description: 'Indo-Chinese' },
+                { name: 'Chicken Fried Rice', category: 'Rice', price: 280, description: 'Wok tossed' },
+                { name: 'Masala Chai', category: 'Beverages', price: 50, description: 'Indian spiced tea' },
+                { name: 'Sweet Lassi', category: 'Beverages', price: 90, description: 'Yogurt drink' },
+                { name: 'Gulab Jamun', category: 'Desserts', price: 120, description: '2 pieces' },
+                { name: 'Rasmalai', category: 'Desserts', price: 150, description: '2 pieces' },
+                { name: 'Green Salad', category: 'Starters', price: 120, description: 'Fresh veggies' },
+                { name: 'Chicken Tikka', category: 'Starters', price: 350, description: '6 pieces' },
+                { name: 'Paneer Tikka', category: 'Starters', price: 300, description: '6 pieces' },
+            ];
+            for (const item of samples) {
+                await fetch('/api/menu', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(item)
+                });
+            }
+        }
+
+        // --- Render Menu ---
+        function renderMenu(filterCategory = 'All') {
+            const tabsContainer = document.getElementById('categoryTabs');
+            const grid = document.getElementById('menuGrid');
+
+            allCategories = new Set(menuItems.map(i => i.category));
+            const categories = ['All', ...allCategories];
+
+            tabsContainer.innerHTML = categories.map(cat =>
+                `<div class="category-tab ${cat === filterCategory ? 'active' : ''}"
+                      onclick="renderMenu('${cat}')">${cat}</div>`
+            ).join('');
+
+            const filtered = filterCategory === 'All'
+                ? menuItems
+                : menuItems.filter(i => i.category === filterCategory);
+
+            grid.innerHTML = filtered.map(item => `
+                <div class="menu-item-card" onclick="addToCart(${item.id})">
+                    <h4>${item.name}</h4>
+                    <div class="price">₹${item.price.toFixed(2)}</div>
+                    <div style="font-size:0.75rem;color:var(--text-light);margin-top:4px;">${item.description || ''}</div>
+                </div>
+            `).join('');
+        }
+
+        // --- Cart ---
+        function addToCart(itemId) {
+            const item = menuItems.find(i => i.id === itemId);
+            if (!item) return;
+            const existing = cart.find(c => c.id === itemId);
+            if (existing) {
+                existing.qty++;
+            } else {
+                cart.push({ ...item, qty: 1 });
+            }
+            renderCart();
+        }
+
+        function removeFromCart(itemId) {
+            const idx = cart.findIndex(c => c.id === itemId);
+            if (idx === -1) return;
+            if (cart[idx].qty > 1) {
+                cart[idx].qty--;
+            } else {
+                cart.splice(idx, 1);
+            }
+            renderCart();
+        }
+
+        function clearCart() {
+            cart = [];
+            renderCart();
+        }
+
+        function renderCart() {
+            const container = document.getElementById('cartItems');
+            if (cart.length === 0) {
+                container.innerHTML = '<p style="color:var(--text-light);text-align:center;padding:40px 0;">No items added</p>';
+            } else {
+                container.innerHTML = cart.map(item => `
+                    <div class="cart-item">
+                        <div class="cart-item-info">
+                            <h5>${item.name}</h5>
+                            <span>₹${item.price.toFixed(2)} × ${item.qty}</span>
+                        </div>
+                        <div class="cart-item-controls">
+                            <button onclick="removeFromCart(${item.id})">−</button>
+                            <span>${item.qty}</span>
+                            <button onclick="addToCart(${item.id})">+</button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            const total = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+            document.getElementById('cartTotal').textContent = `₹${total.toFixed(2)}`;
+        }
+
+        // --- Place Order ---
+        async function placeOrder() {
+            if (cart.length === 0) {
+                showToast('Cart is empty', 'error');
+                return;
+            }
+            const table_no = document.getElementById('tableSelect').value;
+            try {
+                const res = await fetch('/api/orders', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ table_no, items: cart })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    showToast(`Order #${data.id} placed & KOT sent to printer!`, 'success');
+                    clearCart();
+                } else {
+                    showToast(data.error || 'Failed to place order', 'error');
+                }
+            } catch (err) {
+                showToast('Network error. Is the print agent running?', 'error');
+            }
+        }
+
+        // --- Transactions ---
+        function openTransactionModal() {
+            document.getElementById('transactionModal').classList.add('active');
+        }
+
+        async function submitTransaction() {
+            const type = document.getElementById('txnType').value;
+            const amount = parseFloat(document.getElementById('txnAmount').value);
+            const description = document.getElementById('txnDesc').value;
+            if (!amount || amount <= 0) { showToast('Enter a valid amount', 'error'); return; }
+            try {
+                await fetch('/api/transactions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type, amount, description })
+                });
+                showToast('Transaction recorded', 'success');
+                closeModal('transactionModal');
+                document.getElementById('txnAmount').value = '';
+                document.getElementById('txnDesc').value = '';
+            } catch (err) {
+                showToast('Failed to record transaction', 'error');
+            }
+        }
+
+        // --- Inventory ---
+        async function openInventoryModal() {
+            document.getElementById('inventoryModal').classList.add('active');
+            try {
+                const res = await fetch('/api/inventory');
+                const items = await res.json();
+                const list = document.getElementById('inventoryList');
+                if (items.length === 0) {
+                    list.innerHTML = '<p style="color:var(--text-light);text-align:center;padding:20px;">No inventory items. Add one!</p>';
+                } else {
+                    list.innerHTML = items.map(item => `
+                        <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);">
+                            <div>
+                                <strong>${item.item_name}</strong>
+                                <span style="color:var(--text-light);font-size:0.85rem;margin-left:8px;">${item.quantity} ${item.unit}</span>
+                            </div>
+                            ${item.quantity <= item.low_stock_threshold
+                                ? '<span style="color:var(--danger);font-weight:600;font-size:0.85rem;">⚠️ Low Stock</span>'
+                                : ''}
+                        </div>
+                    `).join('');
+                }
+            } catch (err) {
+                document.getElementById('inventoryList').innerHTML = '<p style="color:var(--danger);">Failed to load inventory</p>';
+            }
+        }
+
+        function openAddInventoryModal() {
+            document.getElementById('addInventoryModal').classList.add('active');
+        }
+
+        async function submitInventory() {
+            const item_name = document.getElementById('invName').value;
+            const quantity = parseFloat(document.getElementById('invQty').value);
+            const unit = document.getElementById('invUnit').value;
+            const low_stock_threshold = parseFloat(document.getElementById('invThreshold').value) || 0;
+            if (!item_name || !quantity) { showToast('Fill all fields', 'error'); return; }
+            try {
+                await fetch('/api/inventory', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ item_name, quantity, unit, low_stock_threshold })
+                });
+                showToast('Inventory item added', 'success');
+                closeModal('addInventoryModal');
+                openInventoryModal();
+            } catch (err) {
+                showToast('Failed to add item', 'error');
+            }
+        }
+
+        // --- Summary ---
+        async function openSummaryModal() {
+            document.getElementById('summaryModal').classList.add('active');
+            try {
+                const res = await fetch('/api/summary/today');
+                const data = await res.json();
+                document.getElementById('summaryContent').innerHTML = `
+                    <div style="display:flex;justify-content:space-between;"><span>💵 Cash In:</span><strong>₹${(data.cash_total || 0).toFixed(2)}</strong></div>
+                    <div style="display:flex;justify-content:space-between;"><span>📱 UPI In:</span><strong>₹${(data.upi_total || 0).toFixed(2)}</strong></div>
+                    <div style="display:flex;justify-content:space-between;"><span>💸 Expenses:</span><strong style="color:var(--danger);">₹${(data.expense_total || 0).toFixed(2)}</strong></div>
+                    <div style="display:flex;justify-content:space-between;"><span>🎁 Tips:</span><strong>₹${(data.tips_total || 0).toFixed(2)}</strong></div>
+                    <hr style="margin:10px 0;border:none;border-top:1px solid var(--border);">
+                    <div style="display:flex;justify-content:space-between;"><span>🧾 Total Sales:</span><strong>₹${(data.total_sales || 0).toFixed(2)}</strong></div>
+                    <div style="display:flex;justify-content:space-between;font-size:1.2rem;"><span>💰 Net (Sales - Expenses):</span><strong style="color:var(--success);">₹${((data.total_sales || 0) - (data.expense_total || 0)).toFixed(2)}</strong></div>
+                `;
+            } catch (err) {
+                document.getElementById('summaryContent').innerHTML = '<p style="color:var(--danger);">Failed to load summary</p>';
+            }
+        }
+
+        // --- Settle Bill ---
+        function openSettleModal() {
+            if (cart.length === 0) { showToast('Cart is empty', 'error'); return; }
+            const total = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+            document.getElementById('settleTotal').textContent = `₹${total.toFixed(2)}`;
+            document.getElementById('settleModal').classList.add('active');
+        }
+
+        async function settleBill() {
+            const mode = document.getElementById('settleMode').value;
+            const tip = parseFloat(document.getElementById('settleTip').value) || 0;
+            const staff = document.getElementById('settleStaff').value;
+            const total = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+            const type = mode === 'cash' ? 'cash_in' : 'upi_in';
+
+            try {
+                // Record payment
+                await fetch('/api/transactions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type, amount: total, description: `Bill for Table ${document.getElementById('tableSelect').value}` })
+                });
+                // Record tip if any
+                if (tip > 0) {
+                    await fetch('/api/tips', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ amount: tip, staff_name: staff })
+                    });
+                }
+                showToast(`Bill settled: ₹${total.toFixed(2)} via ${mode.toUpperCase()}`, 'success');
+                closeModal('settleModal');
+                clearCart();
+            } catch (err) {
+                showToast('Failed to settle bill', 'error');
+            }
+        }
+
+        // --- UI Helpers ---
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+        }
+
+        function showToast(message, type = '') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = 'show ' + type;
+            setTimeout(() => { toast.className = ''; }, 3000);
+        }
+
+        // Close modals on overlay click
+        document.querySelectorAll('.modal-overlay').forEach(overlay => {
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) overlay.classList.remove('active');
+            });
+        });
+    </script>
+</body>
+</html>
